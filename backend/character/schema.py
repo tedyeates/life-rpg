@@ -23,6 +23,7 @@ class Skill(SkillRequest):
 class HabitRequest(BaseModel):
     name: str
     xp_gain: int
+    coin_loss: int
 
 class Habit(HabitRequest):
     dates: list[date]
@@ -111,6 +112,7 @@ class Character(BaseModel):
             )
         
         setattr(self, field, {**field_value, related_field.name: related_field})
+        
         
     def reduce_health(self, damage: int):
         self.health -= damage
