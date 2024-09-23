@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Character, Habit, HabitAction } from "@/utils/types"
-import { Dispatch, SetStateAction } from "react"
+import { Dispatch, SetStateAction, useMemo } from "react"
 
 type HabitPanelProps = {
     habit: Habit
@@ -12,36 +12,46 @@ type HabitPanelProps = {
 }
 
 export default function HabitPanel({habit, dispatchHabits, setCharacter}: HabitPanelProps) {
-    const completeHabit = async () => {
-        const today = new Date().toISOString().split('T')[0]
-        if (!habit.dates.includes(today)) {
-            const response = await fetch("http://127.0.0.1:8000/api/character/ted/habit/complete", {
-                method: "PATCH",
-                headers: {
-                    "content-type": "application/json",
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    name: habit.name,
-                    date: today
-                }),
-            })
+    const today = useMemo(() => new Date().toISOString().split('T')[0], [])
+    const isCompletedToday = useMemo(() => habit.dates.includes(today), [habit.dates, today])
 
-            const data = await response.json()
-            console.log(data)
-            setCharacter(data)
-            dispatchHabits({
-                type: "completed",
-                habit: habit.name,
-                date: today
-            })
+    const completeHabit = async () => {
+        if (!isCompletedToday) {
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/character/ted/habit/complete", {
+                    method: "PATCH",
+                    headers: {
+                        "content-type": "application/json",
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        name: habit.name,
+                        date: today
+                    }),
+                })
+
+                if (!response.ok) {
+                    throw new Error('Failed to complete habit')
+                }
+
+                const data = await response.json()
+                setCharacter(data)
+                dispatchHabits({
+                    type: "completed",
+                    habit: habit.name,
+                    date: today
+                })
+            }
+            catch (error) {
+                console.error("Error completing habit:", error)
+            }
         }
     }
 
     const renderCalendar = () => {
-        const today = new Date()
-        const currentMonth = today.getMonth()
-        const currentYear = today.getFullYear()
+        const today_date = new Date()
+        const currentMonth = today_date.getMonth()
+        const currentYear = today_date.getFullYear()
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
 
         const calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
@@ -67,60 +77,68 @@ export default function HabitPanel({habit, dispatchHabits, setCharacter}: HabitP
         )
     }
 
+    if (!habit) {
+        return <div className="text-gray-400">No habit data available</div>
+    }
+
     return (
-        <Card className="border-none w-64 bg-gray-800 bg-opacity-90 text-white rounded-lg shadow-lg">
-        <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between text-xl">
-                <span>{habit.name}</span>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={completeHabit} 
-                                className="p-2 border-none bg-gray-800 text-green-500 hover:text-green-400 hover:bg-gray-700"
-                            >
-                                <CheckCircle2 className="h-5 w-5" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Complete habit for today</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-            <div className="space-y-1">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                    <Star className="w-4 h-4 mr-1 text-blue-500" />
-                    <span className="text-sm font-medium">XP Gain</span>
+        <Card className="border-none w-64 bg-gray-700 bg-opacity-90 text-white rounded-lg shadow-lg">
+            <CardHeader className="pb-2">
+                <CardTitle className="flex items-center justify-between text-xl">
+                    <span>{habit.name}</span>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={completeHabit} 
+                                    className={`p-2 border-none ${
+                                        isCompletedToday
+                                            ? "bg-green-500/20 text-green-300 hover:bg-green-500/20 hover:text-green-300 cursor-default"
+                                            : "bg-gray-700/50 text-gray-300 hover:bg-gray-600/70 hover:text-gray-100"
+                                        }`}
+                                >
+                                    <CheckCircle2 className="h-5 w-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Complete habit for today</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                        <Star className="w-4 h-4 mr-1 text-blue-500" />
+                        <span className="text-sm font-medium">XP Gain</span>
+                    </div>
+                    <span className="text-sm font-medium">+{habit.xp_gain}</span>
                 </div>
-                <span className="text-sm font-medium">+{habit.xp_gain}</span>
-            </div>
-            </div>
+                </div>
 
-            <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                    <Coins className="w-4 h-4 mr-1 text-yellow-500" />
-                    <span className="text-sm font-medium">Coin Loss (if skipped)</span>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                        <Coins className="w-4 h-4 mr-1 text-yellow-500" />
+                        <span className="text-sm font-medium">Coin Loss (if skipped)</span>
+                    </div>
+                    <span className="text-sm font-medium text-red-400">-{habit.coin_loss}</span>
                 </div>
-                <span className="text-sm font-medium text-red-400">-{habit.coin_loss}</span>
-            </div>
 
-            <div className="space-y-1">
-                <div className="flex items-center space-x-2">
-                    <CalendarIcon className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-400">Completion Calendar</span>
+                <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                        <CalendarIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-400">Completion Calendar</span>
+                    </div>
+                    {renderCalendar()}
                 </div>
-                {renderCalendar()}
-            </div>
-        </CardContent>
+            </CardContent>
             <CardFooter>
                 <p className="text-sm text-gray-400">
-                    Completed {habit.dates.length} times this month
+                    Completed {habit.dates.length}
                 </p>
             </CardFooter>
         </Card>

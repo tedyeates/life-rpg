@@ -22,7 +22,7 @@ export default function CharacterPanel(character: Character) {
     }
 
     return (
-        <div className="w-64 p-4 bg-gray-800 bg-opacity-90 text-white rounded-lg shadow-lg">
+        <div className="w-64 p-4 bg-gray-700 bg-opacity-90 text-white rounded-lg shadow-lg">
             <div className="flex flex-col items-center mb-3">
                 <h2 className="text-xl font-bold mb-2">{character.name}</h2>
                 <Avatar className="w-16 h-16">
@@ -57,7 +57,7 @@ export default function CharacterPanel(character: Character) {
                         </div>
                         <span className="text-sm font-medium">{character.xp}/{MAX_XP}</span>
                     </div>
-                    <Progress.Root className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <Progress.Root className="h-2 bg-gray-600 rounded-full overflow-hidden">
                         <Progress.Indicator
                             className="h-full bg-blue-500"
                             style={{ width: `${(character.xp / MAX_XP) * 100}%` }}
