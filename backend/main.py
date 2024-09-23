@@ -4,6 +4,10 @@ from pydantic import ValidationError
 from character import router as character_router
 from fastapi.middleware.cors import CORSMiddleware
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     root_path='/api'
 )
@@ -35,5 +39,7 @@ async def validation_exception_handler(response: Response, exception: Validation
 
 @app.get("/version")
 def version():
-    return {"version": "0.1"}
+    version = 0.1
+    logger.info(f"version {version}")
+    return {"version": version}
 

@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from pydantic import BaseModel
-from datetime import date
+from datetime import date, datetime
 from database import character
 
 MAX_HEALTH = 100
@@ -20,14 +20,31 @@ class Skill(SkillRequest):
         self.level = 0
     
 
+class HabitCompleteRequest(BaseModel):
+    name: str
+    date: str
+
 class HabitRequest(BaseModel):
     name: str
     xp_gain: int
     coin_loss: int
-
+    
 class Habit(HabitRequest):
     dates: list[date]
     
+    @classmethod
+    def from_request(cls, habit_request: HabitRequest) -> "Habit":
+        return Habit(dates=[], **habit_request.model_dump())
+    
+    async def save_date(self, parent: "Character", date: datetime) -> None:
+        await character.update_one(
+            {"name": parent.name},
+            {"$push": {f"habits.{self.name}.dates": date}},   
+        )
+        
+    def update_date(self, parent: "Character", date: date) -> None:
+        parent.habits[self.name].dates.append(date)
+
     
 class BadHabitRequest(BaseModel):
     name: str
@@ -35,6 +52,10 @@ class BadHabitRequest(BaseModel):
     
 class BadHabit(BadHabitRequest):
     dates: list[date]
+    
+    @classmethod
+    def from_request(cls, bad_habit_request: BadHabitRequest) -> "BadHabit":
+        return BadHabit(dates=[], **bad_habit_request.model_dump())
     
     
 class Character(BaseModel):
@@ -75,11 +96,10 @@ class Character(BaseModel):
             upsert=True
         )
         
-    async def save_field(self, field_name: str):
+    async def save_fields(self, field_names: list[str]):
         await character.update_one(
-            {"name": self.name}, 
-            {"$set": {field_name: getattr(self, field_name)}},
-            upsert=True
+            {"name": self.name},
+            {"$set": {field_name: getattr(self, field_name) for field_name in field_names}},   
         )
     
     
@@ -126,11 +146,11 @@ class Character(BaseModel):
         
     def increase_health(self, health_increase: int):
         self.health += health_increase
-        if self.health > self.MAX_HEALTH:
-            self.health = self.MAX_HEALTH
+        if self.health > MAX_HEALTH:
+            self.health = MAX_HEALTH
             
     def reset(self):
-        self.health = self.MAX_HEALTH
+        self.health = MAX_HEALTH
         self.coins = 0
         self.xp = 0
         self.level = 0
@@ -147,11 +167,10 @@ class Character(BaseModel):
     
     def increase_xp(self, xp_increase):
         self.xp += xp_increase
-        if self.xp >= self.MAX_XP:
-            self.xp -= self.MAX_XP
+        if self.xp >= MAX_XP:
+            self.xp -= MAX_XP
             self.level += 1
             
             return True
         
         return False
-            

@@ -1,7 +1,10 @@
-from datetime import date
+from datetime import date, datetime
 from fastapi import APIRouter
-from .schema import BadHabitRequest, Character, Skill, BadHabit, Habit, SkillRequest, HabitRequest
+from .schema import BadHabitRequest, Character, HabitCompleteRequest, Skill, BadHabit, Habit, SkillRequest, HabitRequest
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/character"
@@ -31,39 +34,54 @@ async def add_skill(name: str, skill: SkillRequest) -> Character:
     return current_character
 
 @router.post("/{name}/badhabit")
-async def add_bad_habit(name: str, bad_habit: BadHabitRequest) -> Character:
+async def add_bad_habit(name: str, bad_habit: BadHabitRequest) -> dict[str, BadHabit]:
     current_character = await Character.load_character(name)
-    bad_habit = BadHabit(name=bad_habit.name, dates=[], hp_loss=bad_habit.hp_loss)
+    bad_habit = BadHabit.from_request(bad_habit)
     current_character.add_related_field("bad_habits", bad_habit)
     await current_character.save_related_field("bad_habits", bad_habit)
     
-    return current_character
+    return current_character.bad_habits
 
 
 @router.post("/{name}/habit")
-async def add_habit(name: str, habit: HabitRequest) -> Character:
+async def add_habit(name: str, habit: HabitRequest) -> dict[str, Habit]:
     current_character = await Character.load_character(name)
-    habit = Habit(name=habit.name, dates=[], xp_gain=habit.xp_gain)
+    habit = Habit.from_request(habit)
     current_character.add_related_field("habits", habit)
     await current_character.save_related_field("habits", habit)
     
-    return current_character
+    return current_character.habits
 
-@router.put("/{name}/badhabit")
-async def add_bad_habit(name: str, bad_habit: BadHabitRequest) -> Character:
+@router.patch("/{name}/badhabit")
+async def update_bad_habit(name: str, bad_habit: BadHabitRequest) -> dict[str, BadHabit]:
     current_character = await Character.load_character(name)
-    bad_habit = BadHabit(name=bad_habit.name, dates=[], hp_loss=bad_habit.hp_loss)
+    bad_habit = BadHabit.from_request(bad_habit)
     current_character.add_related_field("bad_habits", bad_habit, is_update=True)
     await current_character.save_related_field("bad_habits", bad_habit)
     
-    return current_character
+    return current_character.bad_habits
 
 
-@router.put("/{name}/habit")
-async def add_habit(name: str, habit: HabitRequest) -> Character:
+@router.patch("/{name}/habit")
+async def update_habit(name: str, habit: HabitRequest) -> dict[str, Habit]:
     current_character = await Character.load_character(name)
-    habit = Habit(name=habit.name, dates=[], xp_gain=habit.xp_gain)
+    habit = Habit.from_request(habit)
     current_character.add_related_field("habits", habit, is_update=True)
     await current_character.save_related_field("habits", habit)
     
+    return current_character.habits
+
+
+@router.patch("/{name}/habit/complete")
+async def complete_habit(name: str, habit: HabitCompleteRequest) -> Character:
+    current_character = await Character.load_character(name)
+    current_habit = current_character.habits[habit.name]
+    current_character.increase_xp(current_habit.xp_gain)
+
+    await current_character.save_fields(["xp", "level"])
+    
+    date_completed = datetime.strptime(habit.date, "%Y-%m-%d")
+    current_habit.update_date(current_character, date_completed)
+    await current_habit.save_date(current_character, date_completed)
+
     return current_character

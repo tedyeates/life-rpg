@@ -6,14 +6,14 @@ export type Skill = {
 export type BadHabit = {
     name: string
     hp_loss: number
-    dates: Date[]
+    dates: string[]
 }
 
 export type Habit = {
     name: string
     xp_gain: number
     coin_loss: number
-    dates: Date[]
+    dates: string[]
 }
 
 export type Character = {
@@ -22,7 +22,21 @@ export type Character = {
     coins: number
     xp: number
     level: number
-    skills: Skill[]
-    bad_habits: BadHabit[],
-    habits: Habit[]
+    skills: {
+        [key: string]: Skill
+    }
+    bad_habits: {
+        [key: string]: BadHabit
+    }
+    habits: {
+        [key: string]: Habit
+    }
+}
+
+
+export type HabitAction = { 
+    type: string
+    habit?: string
+    date?: string
+    habits?: { [key: string]: Habit }
 }

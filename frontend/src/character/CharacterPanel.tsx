@@ -7,7 +7,7 @@ import { Character } from '@/utils/types';
 const MAX_HEALTH = 10
 const MAX_XP = 1000
 
-export default function CharacterPanel({character}: {character: Character}) {
+export default function CharacterPanel(character: Character) {
 
     const renderHearts = () => {
         const hearts = []
