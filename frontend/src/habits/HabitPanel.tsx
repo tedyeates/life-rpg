@@ -1,24 +1,27 @@
-import { CalendarIcon, CheckCircle2, Star, Coins } from "lucide-react"
+import { CalendarIcon, CheckCircle2, Star, Coins, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Character, Habit, HabitAction } from "@/utils/types"
+import { Character, GenericHabit, HabitAction } from "@/utils/types"
 import { Dispatch, SetStateAction, useMemo } from "react"
 
 type HabitPanelProps = {
-    habit: Habit
+    habit: GenericHabit
+    is_bad?: boolean
     dispatchHabits: Dispatch<HabitAction>
     setCharacter: Dispatch<SetStateAction<Character>>
 }
 
-export default function HabitPanel({habit, dispatchHabits, setCharacter}: HabitPanelProps) {
+export default function HabitPanel({habit, is_bad = false, dispatchHabits, setCharacter}: HabitPanelProps) {
     const today = useMemo(() => new Date().toISOString().split('T')[0], [])
     const isCompletedToday = useMemo(() => habit.dates.includes(today), [habit.dates, today])
 
     const completeHabit = async () => {
+        console.log(today)
         if (!isCompletedToday) {
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/character/ted/habit/complete", {
+                const url = `http://127.0.0.1:8000/api/character/ted/${is_bad ? "bad" : ""}habit/complete`
+                const response = await fetch(url, {
                     method: "PATCH",
                     headers: {
                         "content-type": "application/json",
@@ -35,7 +38,7 @@ export default function HabitPanel({habit, dispatchHabits, setCharacter}: HabitP
                 }
 
                 const data = await response.json()
-                setCharacter(data)
+                setCharacter(data.character)
                 dispatchHabits({
                     type: "completed",
                     habit: habit.name,
@@ -50,14 +53,16 @@ export default function HabitPanel({habit, dispatchHabits, setCharacter}: HabitP
 
     const renderCalendar = () => {
         const today_date = new Date()
+        console.log(today_date)
         const currentMonth = today_date.getMonth()
         const currentYear = today_date.getFullYear()
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
 
         const calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
-            const date = new Date(currentYear, currentMonth, i + 1)
-            const dateString = date.toISOString().split('T')[0]
+            const monthString = ("0" + (currentMonth + 1)).slice(-2)
+            const dateString = `${currentYear}-${monthString}-${i + 1}`
             const isCompleted = habit.dates.includes(dateString)
+
             return (
                 <div
                     key={i}
@@ -113,20 +118,25 @@ export default function HabitPanel({habit, dispatchHabits, setCharacter}: HabitP
                 <div className="space-y-1">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                        <Star className="w-4 h-4 mr-1 text-blue-500" />
-                        <span className="text-sm font-medium">XP Gain</span>
+                        {is_bad ? (
+                            <Heart className="w-4 h-4 mr-1 text-red-500" />
+                        ) : (
+                            <Star className="w-4 h-4 mr-1 text-blue-500" />
+                        )}
+                        <span className="text-sm font-medium">{is_bad ? "HP Loss" : "XP Gain"}</span>
                     </div>
-                    <span className="text-sm font-medium">+{habit.xp_gain}</span>
+                    <span className={`text-sm font-medium ${is_bad && "text-red-400"}`}>{is_bad ? "-" : "+"}{habit.stat}</span>
                 </div>
                 </div>
-
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                        <Coins className="w-4 h-4 mr-1 text-yellow-500" />
-                        <span className="text-sm font-medium">Coin Loss (if skipped)</span>
+                {habit.coin_loss &&
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Coins className="w-4 h-4 mr-1 text-yellow-500" />
+                            <span className="text-sm font-medium">Coin Loss (if skipped)</span>
+                        </div>
+                        <span className="text-sm font-medium text-red-400">-{habit.coin_loss}</span>
                     </div>
-                    <span className="text-sm font-medium text-red-400">-{habit.coin_loss}</span>
-                </div>
+                }
 
                 <div className="space-y-1">
                     <div className="flex items-center space-x-2">

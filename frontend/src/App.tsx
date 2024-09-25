@@ -1,8 +1,9 @@
 import { useEffect, useReducer, useState } from 'react';
 import './App.css'
 import CharacterPanel from './character/CharacterPanel'
-import { Character, Habit, HabitAction } from './utils/types';
+import { BadHabit, Character, GenericHabitAction, Habit } from './utils/types';
 import HabitPanel from './habits/HabitPanel';
+import { badHabitToGenericHabit, habitToGenericHabit } from './utils/conversion';
 
 function App() {
     const [character, setCharacter] = useState<Character>({
@@ -16,7 +17,7 @@ function App() {
         habits: {}
     })
 
-    const habitReducer = (state: { [key: string]: Habit }, action: HabitAction) => {
+    const habitReducer = (state: { [key: string]: Habit | BadHabit }, action: GenericHabitAction) => {
         if (action.type === "completed" && action.habit && action.date) {
             return {
                 ...state,
@@ -35,6 +36,7 @@ function App() {
     }
 
     const [habits, dispatchHabits] = useReducer(habitReducer, {})
+    const [badHabits, dispatchBadHabits] = useReducer(habitReducer, {})
     
     useEffect(() => {
         fetch('http://127.0.0.1:8000/api/character/ted')
@@ -43,6 +45,7 @@ function App() {
                 console.log(data)
                 setCharacter(data)
                 dispatchHabits({ type: "set", habits: data.habits})
+                dispatchBadHabits({ type: "set", habits: data.bad_habits})
             })
             .catch(error => console.error(error));
     }, []);
@@ -54,14 +57,27 @@ function App() {
                     <CharacterPanel {...character} />
                 </div>
                 <div className="flex justify-start items-start p-2 gap-4">
-                    {Object.values(habits).map((habit) => (
-                        <HabitPanel 
-                            key={habit.name} 
-                            habit={habit} 
-                            dispatchHabits={dispatchHabits} 
-                            setCharacter={setCharacter}
-                        />
-                    ))}
+                    <div className="flex justify-start items-start p-2 gap-4">
+                        {Object.values(habits).map((habit) => (
+                            <HabitPanel 
+                                key={habit.name} 
+                                habit={habitToGenericHabit(habit as Habit)} 
+                                dispatchHabits={dispatchHabits} 
+                                setCharacter={setCharacter}
+                            />
+                        ))}
+                    </div>
+                    <div className="flex justify-start items-start p-2 gap-4">
+                        {Object.values(badHabits).map((badHabit) => (
+                            <HabitPanel 
+                                key={badHabit.name} 
+                                is_bad
+                                habit={badHabitToGenericHabit(badHabit as BadHabit)} 
+                                dispatchHabits={dispatchBadHabits} 
+                                setCharacter={setCharacter}
+                            />
+                        ))}
+                    </div>
                 </div>
             </div>
         </>

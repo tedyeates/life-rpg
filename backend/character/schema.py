@@ -50,6 +50,15 @@ class BadHabitRequest(BaseModel):
     name: str
     hp_loss: int
     
+    def update_date(self, parent: "Character", date: date) -> None:
+        parent.bad_habits[self.name].dates.append(date)
+        
+    async def save_date(self, parent: "Character", date: datetime) -> None:
+        await character.update_one(
+            {"name": parent.name},
+            {"$push": {f"bad_habits.{self.name}.dates": date}},   
+        )
+    
 class BadHabit(BadHabitRequest):
     dates: list[date]
     

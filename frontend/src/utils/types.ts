@@ -3,6 +3,13 @@ export type Skill = {
     level: number
 }
 
+export type GenericHabit = {
+    name: string
+    stat: number
+    coin_loss?: number
+    dates: string[]
+}
+
 export type BadHabit = {
     name: string
     hp_loss: number
@@ -33,10 +40,17 @@ export type Character = {
     }
 }
 
-
-export type HabitAction = { 
+export type GenericHabitAction = {
     type: string
     habit?: string
     date?: string
-    habits?: { [key: string]: Habit }
+    habits?: { [key: string]: Habit | BadHabit }
+}
+
+export type HabitAction = GenericHabitAction & {
+    habits?: { [key: string]: Habit}
+}
+
+export type BadHabitAction = GenericHabitAction & {
+    habits?: { [key: string]: BadHabit}
 }

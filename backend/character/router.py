@@ -73,10 +73,10 @@ async def update_habit(name: str, habit: HabitRequest) -> dict[str, Habit]:
 
 
 @router.patch("/{name}/habit/complete")
-async def complete_habit(name: str, habit: HabitCompleteRequest) -> Character:
+async def complete_habit(name: str, habit: HabitCompleteRequest):
     current_character = await Character.load_character(name)
     current_habit = current_character.habits[habit.name]
-    current_character.increase_xp(current_habit.xp_gain)
+    has_leveled_up = current_character.increase_xp(current_habit.xp_gain)
 
     await current_character.save_fields(["xp", "level"])
     
@@ -84,4 +84,19 @@ async def complete_habit(name: str, habit: HabitCompleteRequest) -> Character:
     current_habit.update_date(current_character, date_completed)
     await current_habit.save_date(current_character, date_completed)
 
-    return current_character
+    return {"level_up": has_leveled_up, "character": current_character}
+
+
+@router.patch("/{name}/badhabit/complete")
+async def complete_habit(name: str, habit: HabitCompleteRequest):
+    current_character = await Character.load_character(name)
+    current_habit = current_character.bad_habits[habit.name]
+    has_died = current_character.reduce_health(current_habit.hp_loss)
+
+    await current_character.save_fields(["health"])
+    
+    date_completed = datetime.strptime(habit.date, "%Y-%m-%d")
+    current_habit.update_date(current_character, date_completed)
+    await current_habit.save_date(current_character, date_completed)
+
+    return {"died": has_died, "character": current_character}
